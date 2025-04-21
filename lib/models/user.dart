@@ -1,7 +1,7 @@
 class User {
   final String id;
   final String email;
-  final String displayName; // name helyett displayName
+  final String displayName;
   final String role;
 
   User({
@@ -11,22 +11,20 @@ class User {
     required this.role,
   });
 
-  // JSON konverzió, ha később szükséges
-  Map<String, dynamic> toJson() {
+  factory User.fromFirestore(Map<String, dynamic> data, String id) {
+    return User(
+      id: id,
+      email: data['email'] ?? '',
+      displayName: data['displayName'] ?? '',
+      role: data['role'] ?? 'user',
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
     return {
-      'id': id,
       'email': email,
       'displayName': displayName,
       'role': role,
     };
-  }
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'],
-      email: json['email'],
-      displayName: json['displayName'],
-      role: json['role'],
-    );
   }
 }

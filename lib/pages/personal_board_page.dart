@@ -1,224 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:retorki_feladatkezelo/models/task.dart';
-import 'package:retorki_feladatkezelo/providers/project_provider.dart';
-import 'package:retorki_feladatkezelo/widgets/app_header.dart';
-import 'package:retorki_feladatkezelo/widgets/ai_assistant.dart';
+import '../models/task.dart';
+import '../providers/task_provider.dart';
+import '../theme.dart';
 
 class PersonalBoardPage extends StatefulWidget {
-  final String boardId;
-
-  const PersonalBoardPage({super.key, required this.boardId});
+  const PersonalBoardPage({Key? key}) : super(key: key);
 
   @override
   State<PersonalBoardPage> createState() => _PersonalBoardPageState();
 }
 
 class _PersonalBoardPageState extends State<PersonalBoardPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  DateTime? _selectedDate;
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  String _selectedStatus = 'todo';
+  DateTime? _selectedDueDate;
+  String _selectedPriority = 'medium';
+  String _selectedAssignee = '';
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
-  }
-
-  void _addTask() {
-    if (_formKey.currentState!.validate()) {
-      final projectProvider =
-          Provider.of<ProjectProvider>(context, listen: false);
-      final newTask = Task(
+  void _addTask(BuildContext context) {
+    if (_titleController.text.isNotEmpty) {
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      taskProvider.addTask(Task(
         id: DateTime.now().toString(),
         title: _titleController.text,
         description: _descriptionController.text,
-        deadline: _selectedDate,
-        status: 'Folyamatban',
+        status: _selectedStatus,
+        dueDate: _selectedDueDate,
+        priority: _selectedPriority,
+        assignedTo: _selectedAssignee,
         assignedUsers: [],
-        boardId: widget.boardId,
-        createdBy: 'current_user',
+        createdBy: 'currentUserId',
         isTeamTask: false,
-        priority: 'Közepes',
-      );
-      projectProvider.addTask(widget.boardId, newTask);
+        deadline: _selectedDueDate,
+        boardId: 'personalBoard',
+        isCompleted: false,
+      ));
       _titleController.clear();
       _descriptionController.clear();
       setState(() {
-        _selectedDate = null;
-      });
-      Navigator.pop(context);
-    }
-  }
-
-  void _updateTaskStatus(Task task, String newStatus) {
-    final projectProvider =
-        Provider.of<ProjectProvider>(context, listen: false);
-    projectProvider.updateTaskStatus(widget.boardId, task.id, newStatus);
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
+        _selectedStatus = 'todo';
+        _selectedDueDate = null;
+        _selectedPriority = 'medium';
+        _selectedAssignee = '';
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final projectProvider = Provider.of<ProjectProvider>(context);
-    final tasks = projectProvider.getTasks(widget.boardId);
-
     return Scaffold(
-      appBar: AppHeader(
-        title: 'Személyes Tábla',
-        showBackButton: true,
-        showMenu: true,
+      appBar: AppBar(
+        title: Text(
+          'Personal Board',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: AppColors.primaryColor,
       ),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Személyes Munkatábla - ${widget.boardId}',
-                  style: GoogleFonts.openSans(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF6A778A),
-                  ),
-                ),
-                const SizedBox(height: 16.0),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildColumn(
-                          'Folyamatban',
-                          tasks
-                              .where((task) => task.status == 'Folyamatban')
-                              .toList()),
-                      const SizedBox(width: 16.0),
-                      _buildColumn(
-                          'Elvégzett',
-                          tasks
-                              .where((task) => task.status == 'Elvégzett')
-                              .toList()),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const AIAssistant(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddTaskDialog(context),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
+      body: Consumer<TaskProvider>(
+        builder: (context, taskProvider, child) {
+          final todoTasks = taskProvider.tasks
+              .where((task) => task.status == 'todo')
+              .toList();
+          final inProgressTasks = taskProvider.tasks
+              .where((task) => task.status == 'in_progress')
+              .toList();
+          final doneTasks = taskProvider.tasks
+              .where((task) => task.status == 'done')
+              .toList();
 
-  Widget _buildColumn(String status, List<Task> tasks) {
-    return Expanded(
-      child: DragTarget<Task>(
-        onAcceptWithDetails: (details) {
-          _updateTaskStatus(details.data, status);
-        },
-        builder: (context, candidateData, rejectedData) {
-          return Container(
-            padding: const EdgeInsets.all(8.0),
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFD9BB8A)),
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  status,
-                  style: GoogleFonts.openSans(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF6A778A),
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = tasks[index];
-                      return Draggable<Task>(
-                        data: task,
-                        feedback: Material(
-                          child: Card(
-                            elevation: 4.0,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                task.title,
-                                style: GoogleFonts.openSans(fontSize: 16),
-                              ),
-                            ),
-                          ),
-                        ),
-                        childWhenDragging: Container(),
-                        child: Card(
-                          elevation: 2.0,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  task.title,
-                                  style: GoogleFonts.openSans(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4.0),
-                                Text(
-                                  task.description,
-                                  style: GoogleFonts.openSans(fontSize: 14),
-                                ),
-                                const SizedBox(height: 4.0),
-                                if (task.deadline != null)
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.calendar_today,
-                                          size: 16),
-                                      const SizedBox(width: 4.0),
-                                      Text(
-                                        'Határidő: ${task.deadline!.toString().substring(0, 10)}',
-                                        style:
-                                            GoogleFonts.openSans(fontSize: 14),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAddTaskForm(context),
+                  const SizedBox(height: 20),
+                  _buildTaskColumn('To Do', todoTasks, taskProvider),
+                  const SizedBox(height: 20),
+                  _buildTaskColumn(
+                      'In Progress', inProgressTasks, taskProvider),
+                  const SizedBox(height: 20),
+                  _buildTaskColumn('Done', doneTasks, taskProvider),
+                ],
+              ),
             ),
           );
         },
@@ -226,76 +94,322 @@ class _PersonalBoardPageState extends State<PersonalBoardPage> {
     );
   }
 
-  void _showAddTaskDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(
-            'Új Feladat',
-            style: GoogleFonts.openSans(fontWeight: FontWeight.bold),
-          ),
-          content: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Cím',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Kérlek, add meg a címet!';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 8.0),
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Leírás',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 8.0),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _selectedDate == null
-                              ? 'Nincs határidő kiválasztva'
-                              : 'Határidő: ${_selectedDate!.toString().substring(0, 10)}',
-                          style: GoogleFonts.openSans(fontSize: 14),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => _selectDate(context),
-                        child: const Text('Dátum választás'),
-                      ),
-                    ],
-                  ),
-                ],
+  Widget _buildAddTaskForm(BuildContext context) {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Add New Task',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Mégse'),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _titleController,
+              decoration: InputDecoration(
+                labelText: 'Title',
+                border: OutlineInputBorder(),
+              ),
             ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _descriptionController,
+              decoration: InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              value: _selectedStatus,
+              decoration: InputDecoration(
+                labelText: 'Status',
+                border: OutlineInputBorder(),
+              ),
+              items: ['todo', 'in_progress', 'done']
+                  .map((status) => DropdownMenuItem(
+                        value: status,
+                        child: Text(status),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedStatus = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              value: _selectedPriority,
+              decoration: InputDecoration(
+                labelText: 'Priority',
+                border: OutlineInputBorder(),
+              ),
+              items: ['low', 'medium', 'high']
+                  .map((priority) => DropdownMenuItem(
+                        value: priority,
+                        child: Text(priority),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedPriority = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              decoration: InputDecoration(
+                labelText: 'Assignee',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _selectedAssignee = value;
+                });
+              },
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  _selectedDueDate == null
+                      ? 'No Due Date'
+                      : 'Due: ${_selectedDueDate!.toString().substring(0, 10)}',
+                  style: GoogleFonts.poppins(fontSize: 16),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () async {
+                    final pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2100),
+                    );
+                    if (pickedDate != null) {
+                      setState(() {
+                        _selectedDueDate = pickedDate;
+                      });
+                    }
+                  },
+                  child: Text(
+                    'Pick Due Date',
+                    style: GoogleFonts.poppins(
+                      color: AppColors.primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             ElevatedButton(
-              onPressed: _addTask,
-              child: const Text('Hozzáadás'),
+              onPressed: () => _addTask(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+              ),
+              child: Text(
+                'Add Task',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                ),
+              ),
             ),
           ],
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskColumn(
+      String title, List<Task> tasks, TaskProvider taskProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        tasks.isEmpty
+            ? Text(
+                'No tasks',
+                style: GoogleFonts.poppins(fontSize: 16),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: tasks.length,
+                itemBuilder: (context, index) {
+                  final task = tasks[index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      title: Text(
+                        task.title,
+                        style: GoogleFonts.poppins(fontSize: 16),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(task.description),
+                          Text('Priority: ${task.priority}'),
+                          Text(
+                            task.deadline == null
+                                ? 'No Deadline'
+                                : 'Deadline: ${task.deadline!.toString().substring(0, 10)}',
+                          ),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          taskProvider.deleteTask(task.id);
+                        },
+                      ),
+                      onTap: () {
+                        _titleController.text = task.title;
+                        _descriptionController.text = task.description;
+                        setState(() {
+                          _selectedStatus = task.status;
+                          _selectedDueDate = task.dueDate;
+                          _selectedPriority = task.priority;
+                          _selectedAssignee = task.assignedTo;
+                        });
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text(
+                              'Edit Task',
+                              style: GoogleFonts.poppins(),
+                            ),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextField(
+                                    controller: _titleController,
+                                    decoration: const InputDecoration(
+                                        labelText: 'Title'),
+                                  ),
+                                  TextField(
+                                    controller: _descriptionController,
+                                    decoration: const InputDecoration(
+                                        labelText: 'Description'),
+                                  ),
+                                  DropdownButtonFormField<String>(
+                                    value: _selectedStatus,
+                                    items: ['todo', 'in_progress', 'done']
+                                        .map((status) => DropdownMenuItem(
+                                              value: status,
+                                              child: Text(status),
+                                            ))
+                                        .toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedStatus = value!;
+                                      });
+                                    },
+                                  ),
+                                  DropdownButtonFormField<String>(
+                                    value: _selectedPriority,
+                                    items: ['low', 'medium', 'high']
+                                        .map((priority) => DropdownMenuItem(
+                                              value: priority,
+                                              child: Text(priority),
+                                            ))
+                                        .toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedPriority = value!;
+                                      });
+                                    },
+                                  ),
+                                  TextField(
+                                    decoration: const InputDecoration(
+                                        labelText: 'Assignee'),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedAssignee = value;
+                                      });
+                                    },
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _selectedDueDate == null
+                                            ? 'No Due Date'
+                                            : 'Due: ${_selectedDueDate!.toString().substring(0, 10)}',
+                                      ),
+                                      const Spacer(),
+                                      TextButton(
+                                        onPressed: () async {
+                                          final pickedDate =
+                                              await showDatePicker(
+                                            context: context,
+                                            initialDate: DateTime.now(),
+                                            firstDate: DateTime.now(),
+                                            lastDate: DateTime(2100),
+                                          );
+                                          if (pickedDate != null) {
+                                            setState(() {
+                                              _selectedDueDate = pickedDate;
+                                            });
+                                          }
+                                        },
+                                        child: const Text('Pick Due Date'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  taskProvider.updateTask(Task(
+                                    id: task.id,
+                                    title: _titleController.text,
+                                    description: _descriptionController.text,
+                                    status: _selectedStatus,
+                                    dueDate: _selectedDueDate,
+                                    priority: _selectedPriority,
+                                    assignedTo: _selectedAssignee,
+                                    assignedUsers: task.assignedUsers,
+                                    createdBy: task.createdBy,
+                                    isTeamTask: task.isTeamTask,
+                                    deadline: _selectedDueDate,
+                                    boardId: task.boardId,
+                                    isCompleted: task.isCompleted,
+                                  ));
+                                  Navigator.of(context).pop();
+                                },
+                                child: const Text('Save'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+      ],
     );
   }
 }

@@ -1,82 +1,88 @@
-import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:retorki_feladatkezelo/models/user.dart';
-import 'package:retorki_feladatkezelo/services/database_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/user.dart' as custom;
 
 class AuthService {
-  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
-  final DatabaseService _databaseService = DatabaseService();
-  final StreamController<User?> _userController =
-      StreamController<User?>.broadcast();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Stream<User?> get user => _userController.stream;
-
-  AuthService() {
-    _auth.authStateChanges().listen((firebase_auth.User? firebaseUser) async {
-      if (firebaseUser == null) {
-        _userController.add(null);
-      } else {
-        final user = await _databaseService.getUser(firebaseUser.uid);
-        _userController.add(user);
-      }
-    });
+  // Getter for the current user
+  custom.User? get user {
+    final firebaseUser = _auth.currentUser;
+    return firebaseUser != null
+        ? custom.User(
+            id: firebaseUser.uid,
+            email: firebaseUser.email ?? '',
+            displayName: firebaseUser.displayName ?? '',
+            role: 'user', // Default role
+          )
+        : null;
   }
 
-  Future<void> signUp(String email, String password, String displayName) async {
+  // Sign in with email and password
+  Future<custom.User?> signInWithEmailAndPassword(
+      String email, String password) async {
     try {
-      final credential = await _auth.createUserWithEmailAndPassword(
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      if (credential.user != null) {
-        final user = User(
-          id: credential.user!.uid,
-          email: email,
-          displayName: displayName, // name helyett displayName
-          role: 'user',
+      final firebaseUser = userCredential.user;
+      return firebaseUser != null
+          ? custom.User(
+              id: firebaseUser.uid,
+              email: firebaseUser.email ?? '',
+              displayName: firebaseUser.displayName ?? '',
+              role: 'user', // Default role
+            )
+          : null;
+    } catch (e) {
+      print('Error during sign in: $e');
+      return null;
+    }
+  }
+
+  // Register with email and password
+  Future<custom.User?> registerWithEmailAndPassword(
+      String email, String password, String displayName) async {
+    try {
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final firebaseUser = userCredential.user;
+      if (firebaseUser != null) {
+        await firebaseUser.updateDisplayName(displayName);
+        await firebaseUser.reload();
+        return custom.User(
+          id: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          displayName: firebaseUser.displayName ?? '',
+          role: 'user', // Default role
         );
-        await _databaseService.saveUser(user);
-        _userController.add(user);
       }
+      return null;
     } catch (e) {
-      print('Hiba a regisztráció során: $e');
-      rethrow;
+      print('Error during registration: $e');
+      return null;
     }
   }
 
-  Future<void> signIn(String email, String password) async {
+  // Update user profile (display name)
+  Future<void> updateUserProfile(String displayName) async {
     try {
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      if (credential.user != null) {
-        final user = await _databaseService.getUser(credential.user!.uid);
-        if (user != null) {
-          _userController.add(user);
-        } else {
-          final newUser = User(
-            id: credential.user!.uid,
-            email: email,
-            displayName: email.split('@')[0], // Alapértelmezett displayName
-            role: 'user',
-          );
-          await _databaseService.saveUser(newUser);
-          _userController.add(newUser);
-        }
-      }
+      await _auth.currentUser?.updateDisplayName(displayName);
+      await _auth.currentUser?.reload();
     } catch (e) {
-      print('Hiba a bejelentkezés során: $e');
+      print('Error updating user profile: $e');
       rethrow;
     }
   }
 
+  // Sign out
   Future<void> signOut() async {
     try {
       await _auth.signOut();
-      _userController.add(null);
     } catch (e) {
-      print('Hiba a kijelentkezés során: $e');
+      print('Error during sign out: $e');
       rethrow;
     }
   }

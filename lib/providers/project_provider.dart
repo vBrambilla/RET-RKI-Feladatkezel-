@@ -1,60 +1,45 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/task.dart';
-import '../models/project.dart';
 
 class ProjectProvider with ChangeNotifier {
-  final List<Project> _projects = [];
-  final Map<String, List<Task>> _tasks = {
-    'personal': [],
-    'team': [],
-  };
+  List<Task> _tasks = [];
 
-  List<Project> get projects => _projects;
+  List<Task> get tasks => _tasks;
 
-  List<Task> getTasks(String boardId) {
-    return _tasks[boardId] ?? [];
+  void addTask(Task task) {
+    _tasks.add(task);
+    notifyListeners();
   }
 
-  void fetchProjects() {
-    _projects.add(Project(
-      id: '1',
-      name: 'Sample Project',
-      description: 'A sample project',
-      tasks: [],
+  void addProjectTask(String projectId) {
+    _tasks.add(Task(
+      id: DateTime.now().toString(),
+      title: 'New Task in $projectId',
+      description: 'Description for task in $projectId',
+      status: 'todo',
+      dueDate: DateTime.now().add(Duration(days: 7)),
+      deadline: DateTime.now().add(Duration(days: 7)),
+      priority: 'medium',
+      assignedTo: 'userId',
+      assignedUsers: [],
+      createdBy: 'currentUserId',
+      isTeamTask: true,
+      boardId: projectId,
+      isCompleted: false,
     ));
     notifyListeners();
   }
 
-  void addTask(String boardId, Task task) {
-    if (!_tasks.containsKey(boardId)) {
-      _tasks[boardId] = [];
+  void updateTask(Task task) {
+    final index = _tasks.indexWhere((t) => t.id == task.id);
+    if (index != -1) {
+      _tasks[index] = task;
+      notifyListeners();
     }
-    _tasks[boardId]!.add(task);
-    notifyListeners();
   }
 
-  void updateTaskStatus(String boardId, String taskId, String newStatus) {
-    final tasks = _tasks[boardId];
-    if (tasks != null) {
-      final taskIndex = tasks.indexWhere((task) => task.id == taskId);
-      if (taskIndex != -1) {
-        final updatedTask = Task(
-          id: tasks[taskIndex].id,
-          title: tasks[taskIndex].title,
-          description: tasks[taskIndex].description,
-          deadline: tasks[taskIndex].deadline,
-          status: newStatus,
-          assignee: tasks[taskIndex].assignee,
-          assignedUsers: tasks[taskIndex].assignedUsers,
-          boardId: tasks[taskIndex].boardId,
-          createdBy: tasks[taskIndex].createdBy,
-          isTeamTask: tasks[taskIndex].isTeamTask,
-          priority: tasks[taskIndex].priority,
-          isCompleted: tasks[taskIndex].isCompleted,
-        );
-        tasks[taskIndex] = updatedTask;
-        notifyListeners();
-      }
-    }
+  void deleteTask(String taskId) {
+    _tasks.removeWhere((t) => t.id == taskId);
+    notifyListeners();
   }
 }
