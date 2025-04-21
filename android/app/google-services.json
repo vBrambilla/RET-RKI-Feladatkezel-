@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "443367167345",
+    "project_id": "retorki-feladatkezelo",
+    "storage_bucket": "retorki-feladatkezelo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:443367167345:android:5b3fc4c98108cbf5c852d0",
+        "android_client_info": {
+          "package_name": "com.example.dreamflow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhACmo45lNvxt8O7gBPxaoEJeVLgXZck0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
