@@ -41,6 +41,32 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  Future<void> addUser(User user) async {
+    try {
+      await _firestore.collection('users').doc(user.id).set(user.toFirestore());
+      _users.add(user);
+      notifyListeners();
+    } catch (e) {
+      print('Error adding user: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteUser(String userId) async {
+    try {
+      await _firestore.collection('users').doc(userId).delete();
+      _users.removeWhere((user) => user.id == userId);
+      notifyListeners();
+    } catch (e) {
+      print('Error deleting user: $e');
+      rethrow;
+    }
+  }
+
+  bool canManageUsers() {
+    return _user?.role == 'admin';
+  }
+
   Future<void> updateDisplayName(String displayName) async {
     try {
       await _authService.updateUserProfile(displayName);

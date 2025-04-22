@@ -1,42 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:retorki_feladatkezelo/services/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
+import '../services/auth_service.dart';
+import '../theme.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({Key? key}) : super(key: key);
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+  Future<void> _login(BuildContext context) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-  Future<void> _login() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kérlek, tölts ki minden mezőt!')),
+    try {
+      final user = await authService.signInWithEmailAndPassword(
+        _emailController.text,
+        _passwordController.text,
       );
-      return;
-    }
-
-    final user =
-        await AuthService().signInWithEmailAndPassword(email, password);
-    if (user != null) {
-      Navigator.pushReplacementNamed(context, '/dashboard');
-    } else {
+      if (user != null) {
+        userProvider.loadUsers();
+        if (!mounted) return; // Ellenőrizzük, hogy a widget még létezik-e
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bejelentkezés sikertelen!')),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
@@ -45,7 +47,15 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bejelentkezés'),
+        title: Text(
+          'Login',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: AppColors.primaryColor,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -54,24 +64,44 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             TextField(
               controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
             ),
+            const SizedBox(height: 10),
             TextField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Jelszó'),
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+              ),
               obscureText: true,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _login,
-              child: const Text('Bejelentkezés'),
+              onPressed: () => _login(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+              ),
+              child: Text(
+                'Login',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                ),
+              ),
             ),
+            const SizedBox(height: 10),
             TextButton(
               onPressed: () {
                 Navigator.pushNamed(context, '/register');
               },
-              child: const Text('Regisztráció'),
+              child: Text(
+                'Don’t have an account? Register',
+                style: GoogleFonts.poppins(
+                  color: AppColors.primaryColor,
+                ),
+              ),
             ),
           ],
         ),

@@ -1,45 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:retorki_feladatkezelo/services/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
+import '../theme.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+  const RegisterPage({Key? key}) : super(key: key);
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _displayNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _displayNameController = TextEditingController();
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _displayNameController.dispose();
-    super.dispose();
-  }
+  Future<void> _register(BuildContext context) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
 
-  Future<void> _register() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final displayName = _displayNameController.text.trim();
-
-    if (email.isEmpty || password.isEmpty || displayName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kérlek, tölts ki minden mezőt!')),
+    try {
+      final user = await authService.registerWithEmailAndPassword(
+        _emailController.text,
+        _passwordController.text,
+        _displayNameController.text,
       );
-      return;
-    }
-
-    final user = await AuthService()
-        .registerWithEmailAndPassword(email, password, displayName);
-    if (user != null) {
-      Navigator.pushReplacementNamed(context, '/dashboard');
-    } else {
+      if (user != null) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration failed')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Regisztráció sikertelen!')),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
@@ -48,7 +46,15 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Regisztráció'),
+        title: Text(
+          'Register',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: AppColors.primaryColor,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -56,23 +62,53 @@ class _RegisterPageState extends State<RegisterPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
+              controller: _displayNameController,
+              decoration: const InputDecoration(
+                labelText: 'Display Name',
+                border: OutlineInputBorder(),
+              ),
             ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
             TextField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Jelszó'),
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+              ),
               obscureText: true,
-            ),
-            TextField(
-              controller: _displayNameController,
-              decoration: const InputDecoration(labelText: 'Név'),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _register,
-              child: const Text('Regisztráció'),
+              onPressed: () => _register(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+              ),
+              child: Text(
+                'Register',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/');
+              },
+              child: Text(
+                'Already have an account? Login',
+                style: GoogleFonts.poppins(
+                  color: AppColors.primaryColor,
+                ),
+              ),
             ),
           ],
         ),
