@@ -16,9 +16,11 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  Future<void> _login(BuildContext context) async {
+  Future<void> _login() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     try {
       final user = await authService.signInWithEmailAndPassword(
@@ -27,17 +29,14 @@ class _LoginPageState extends State<LoginPage> {
       );
       if (user != null) {
         userProvider.loadUsers();
-        if (!mounted) return; // Ellenőrizzük, hogy a widget még létezik-e
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        navigator.pushReplacementNamed('/dashboard');
       } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(content: Text('Login failed')),
         );
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
     }
@@ -80,7 +79,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => _login(context),
+              onPressed: _login,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,
               ),

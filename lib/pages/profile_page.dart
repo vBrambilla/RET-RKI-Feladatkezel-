@@ -15,32 +15,34 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _displayNameController = TextEditingController();
 
-  Future<void> _updateProfile(BuildContext context) async {
+  Future<void> _updateProfile() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     try {
       await userProvider.updateDisplayName(_displayNameController.text);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         const SnackBar(content: Text('Profile updated')),
       );
-      Navigator.pop(context);
+      navigator.pop();
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
     }
   }
 
-  Future<void> _signOut(BuildContext context) async {
+  Future<void> _signOut() async {
     final authService = Provider.of<AuthService>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     try {
       await authService.signOut();
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/');
+      navigator.pushReplacementNamed('/');
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
     }
@@ -87,7 +89,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () => _updateProfile(context),
+                  onPressed: _updateProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryColor,
                   ),
@@ -100,7 +102,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () => _signOut(context),
+                  onPressed: _signOut,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                   ),

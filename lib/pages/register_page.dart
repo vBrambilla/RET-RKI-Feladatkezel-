@@ -16,8 +16,10 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _displayNameController = TextEditingController();
 
-  Future<void> _register(BuildContext context) async {
+  Future<void> _register() async {
     final authService = Provider.of<AuthService>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     try {
       final user = await authService.registerWithEmailAndPassword(
@@ -26,17 +28,14 @@ class _RegisterPageState extends State<RegisterPage> {
         _displayNameController.text,
       );
       if (user != null) {
-        if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        navigator.pushReplacementNamed('/dashboard');
       } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(content: Text('Registration failed')),
         );
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
     }
@@ -87,7 +86,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => _register(context),
+              onPressed: _register,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,
               ),
